@@ -1,6 +1,7 @@
 """Properties parser."""
 
 from configparser import ConfigParser
+from contextlib import suppress
 from io import StringIO
 from tempfile import NamedTemporaryFile
 from typing import Any, IO, Iterable, Union, Optional
@@ -29,8 +30,24 @@ class PropertiesParser:
     def __getitem__(self, key: str) -> str:
         return self.parser[SECTION][key]
 
+    def __iter__(self):
+        return iter(self.parser[SECTION])
+
     def __setitem__(self, key: str, value: Any) -> None:
         self.parser[SECTION][key] = value
+
+    def get_parsed(self, key: str) -> Union[str, int, float, bool]:
+        """Returns a parsed key value."""
+        with suppress(ValueError):
+            return self.getint(key)
+
+        with suppress(ValueError):
+            return self.getfloat(key)
+
+        with suppress(ValueError):
+            return self.getboolean(key)
+
+        return self.get(key)
 
     def get(self, key: str, **kwargs) -> str:
         """Returns the value of the respective key."""
@@ -68,3 +85,7 @@ class PropertiesParser:
                 for index, line in enumerate(tmp):
                     if index > 0:   # Skip section header.
                         file.write(line)
+
+    def to_json(self) -> dict[str, Union[str, int, float, bool]]:
+        """Returns a JSON-ish dict."""
+        return {key: self.get_parsed(key) for key in self}
